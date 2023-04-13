@@ -4,12 +4,14 @@ const fs = require("fs/promises");
 require("dotenv").config();
 require("colors");
 
+// Class that implements refactoring of a parsed site
 class PageModifier {
   constructor() {
     this.browser = null;
     this.page = null;
     this.pathDir = path.resolve("file:///", __dirname, "../src/index.html");
   }
+  // Fuction that initializes pupetter browser
   async initializeModifier(PROX_SERVER, headless = "true") {
     this.browser = await puppeteer.launch({
       executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -17,17 +19,17 @@ class PageModifier {
       ignoreHTTPSErrors: true,
     });
   }
-
+  // Create new page in browser
   async createPage() {
     this.page = await this.browser.newPage();
   }
-
+  // Navigate for link
   async gotoLink() {
     console.log(this.pathDir);
     await this.page.goto(this.pathDir);
     await this.page.waitForSelector("html", { visible: true });
   }
-
+  // Delete preset settings, for example <base>
   async clearPresetSettings() {
     await this.page.evaluate(async () => {
       const removeBase = document.querySelector("base");
@@ -36,7 +38,7 @@ class PageModifier {
       }
     });
   }
-
+  // Edit css link in html file
   async editCssLink() {
     const linksCss = await this.page.$$eval("link", (elements) =>
       elements.map((el) => el.href).filter((e) => e.includes(".css"))
@@ -70,7 +72,7 @@ class PageModifier {
       console.log(err);
     }
   }
-
+  // Edit js script in html file
   async editJsScript() {
     const scripts = await this.page.$$eval("script", (elements) =>
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
@@ -105,7 +107,7 @@ class PageModifier {
       console.log(err);
     }
   }
-
+  // Edit or add jquery script in html file
   async editJqueryScript() {
     await this.page.$eval("head", (head) => {
       const linkJquery =
@@ -123,9 +125,11 @@ class PageModifier {
       }
     });
   }
+  // edit the tag "a" clearing the href attribute
   async clearLinkTag() {
     await this.page.$$eval("a", (e) => e.map((el) => el.href == "#"));
   }
+  //edit img to specify the required path
   async editImages() {
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let i = 0; i < images.length; i += 1) {
@@ -144,7 +148,7 @@ class PageModifier {
       }
     }
   }
-
+  // after all edit , it function update our html
   async updateHtml() {
     console.log("update");
 
@@ -156,6 +160,7 @@ class PageModifier {
       console.log("File created");
     });
   }
+  // finally the script and close the browser
   async closeBrowser() {
     await this.browser.close();
 
