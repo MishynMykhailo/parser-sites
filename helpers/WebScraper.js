@@ -3,11 +3,13 @@ require("colors");
 require("dotenv").config();
 const { P_LINK, PROX_SERVER, PROX_LOGIN, PROX_PASS } = process.env;
 
+// Class that implements parsed site
 class WebScraper {
   constructor() {
     this.browser = null;
     this.page = null;
   }
+  // Method implement initiaalize browser for parser
   async initializeParser(PROX_SERVER, headless = "true") {
     this.browser = await puppeteer.launch({
       executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -20,11 +22,11 @@ class WebScraper {
       ],
     });
   }
-
+  //  Method implement create page for parser
   async createPage() {
     this.page = await this.browser.newPage();
   }
-
+  //  Method implement authenticate proxy for parser, if any PROX_LOGIN and PROX_PASS
   async authenticateProxy(PROX_LOGIN, PROX_PASS) {
     if (!PROX_LOGIN || !PROX_PASS) {
       console.log("hi");
@@ -40,16 +42,16 @@ class WebScraper {
       console.log("Ошибка при подключении к прокси", err.message);
     }
   }
-
+  //  Method implement naviagte on a page
   async gotoLink(P_LINK) {
     await this.page.goto(`${P_LINK}`);
   }
-
+  //  Method implement parse full content in HTML
   async parseContent() {
     await this.page.waitForSelector("html", { visible: true });
     return await this.page.content();
   }
-
+  // //  Method implement find js scripts on a page
   async searchJsForPage(createFile, P_LINK) {
     const scripts = await this.page.$$eval(
       'script[type="text/javascript"]',
@@ -67,7 +69,7 @@ class WebScraper {
     }
     await this.gotoLink(P_LINK);
   }
-
+  //  Method implement find css links on a page
   async searchCssForPage(createFile, P_LINK) {
     const linkCss = await this.page.$$eval(
       'link[rel="stylesheet"]',
@@ -86,7 +88,7 @@ class WebScraper {
     }
     await this.gotoLink(P_LINK);
   }
-
+  //  Method implement find img tags on a page
   async searchImageForPage(createFile, P_LINK) {
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of images) {
@@ -102,7 +104,7 @@ class WebScraper {
     }
     await this.gotoLink(P_LINK);
   }
-
+  //  Method implement closed broser after compliting all tasks
   async closeBrowser() {
     await this.browser.close();
 
@@ -110,4 +112,3 @@ class WebScraper {
   }
 }
 module.exports = WebScraper;
-

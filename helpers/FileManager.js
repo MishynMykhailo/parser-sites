@@ -1,7 +1,8 @@
 const fs = require("fs/promises");
+// Class that implements file manager functional
 class FileManager {
   constructor() {}
-  // Сделать функцию которая будет проверять на наличие папки по указаному пути checkIfDirectoryExists;
+  // Method implement check a path specifield folder
   async checkIfDirectoryExists(path) {
     try {
       const stats = await fs.stat(path);
@@ -14,7 +15,7 @@ class FileManager {
       }
     }
   }
-
+  // Method implement create folder "src"
   async createSrcFolder() {
     try {
       await fs.mkdir("src");
@@ -24,6 +25,7 @@ class FileManager {
     }
   }
 
+  // Method implement create folder "css"
   async createCssFolder() {
     try {
       await fs.mkdir("./src/css");
@@ -33,6 +35,7 @@ class FileManager {
     }
   }
 
+  // Method implement create folder "js"
   async createJsFolder() {
     try {
       await fs.mkdir("./src/js");
@@ -42,6 +45,7 @@ class FileManager {
     }
   }
 
+  // Method implement create folder "images"
   async createImagesFolder() {
     try {
       await fs.mkdir("./src/images");
@@ -51,6 +55,7 @@ class FileManager {
     }
   }
 
+  // Method implement create file "html"
   async createIndexHtml(htmlContent) {
     try {
       await fs.writeFile("./src/index.html", htmlContent);
@@ -59,6 +64,8 @@ class FileManager {
       console.log(err.message.red);
     }
   }
+
+  // Method implement create files "js"
   async createJsFile(fileName, data) {
     try {
       await fs.writeFile(`./src/js/${fileName}`, data);
@@ -67,6 +74,8 @@ class FileManager {
       console.log(err.message.red);
     }
   }
+
+  // Method implement create files "css"
   async createCssFile(fileName, data) {
     try {
       await fs.writeFile(`./src/css/${fileName}`, data);
@@ -75,6 +84,8 @@ class FileManager {
       console.log(err.red);
     }
   }
+
+  // Method implement create files "images"
   async createImageFile(fileName, data) {
     try {
       await fs.writeFile(`./src/images/${fileName}`, data);
