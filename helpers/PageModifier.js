@@ -20,8 +20,9 @@ class PageModifier {
     });
   }
   //  Method implement create page for parser
-  async createPage() {
+  async createPage(duration = 30000) {
     this.page = await this.browser.newPage();
+    this.page.setDefaultNavigationTimeout(duration);
   }
   //  Method implement naviagte on a page
   async gotoLink() {

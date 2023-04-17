@@ -1,7 +1,6 @@
 const puppeteer = require("puppeteer");
 require("colors");
 require("dotenv").config();
-const { P_LINK, PROX_SERVER, PROX_LOGIN, PROX_PASS } = process.env;
 
 // Class that implements parsed site
 class WebScraper {
@@ -23,8 +22,9 @@ class WebScraper {
     });
   }
   //  Method implement create page for parser
-  async createPage() {
+  async createPage(duration = 30000) {
     this.page = await this.browser.newPage();
+    this.page.setDefaultNavigationTimeout(duration);
   }
   //  Method implement authenticate proxy for parser, if any PROX_LOGIN and PROX_PASS
   async authenticateProxy(PROX_LOGIN, PROX_PASS) {
