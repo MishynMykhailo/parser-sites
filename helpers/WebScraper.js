@@ -29,7 +29,7 @@ class WebScraper {
   //  Method implement authenticate proxy for parser, if any PROX_LOGIN and PROX_PASS
   async authenticateProxy(PROX_LOGIN, PROX_PASS) {
     if (!PROX_LOGIN || !PROX_PASS) {
-      console.log("hi");
+      console.log("Вход без прокси".green);
       return;
     }
     try {

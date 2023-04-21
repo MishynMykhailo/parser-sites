@@ -37,6 +37,7 @@ class PageModifier {
       if (removeBase) {
         removeBase.remove();
       }
+      console.log("Тег <base> удален".green);
     });
   }
   // Method implement edit css link in html file
@@ -54,6 +55,7 @@ class PageModifier {
       } catch (err) {
         console.log(err);
       }
+      console.log("Тег <link> почищен".green);
     }
     const files = await fs.readdir("./src/css");
     try {
@@ -72,6 +74,7 @@ class PageModifier {
     } catch (err) {
       console.log(err);
     }
+    console.log("Тег <link> из существующих файлов css добавлен в head".green);
   }
   // Method implement edit js script in html file
   async editJsScript() {
@@ -89,6 +92,7 @@ class PageModifier {
       } catch (err) {
         console.log(err);
       }
+      console.log("Тег <script> почищен".green);
     }
     const files = await fs.readdir("./src/js");
     try {
@@ -107,6 +111,7 @@ class PageModifier {
     } catch (err) {
       console.log(err);
     }
+    console.log("Тег <script> из существующих файлов js добавлен в body".green);
   }
   // Method implement edit or add jquery script in html file
   async editJqueryScript() {
@@ -114,7 +119,7 @@ class PageModifier {
       const linkJquery =
         "https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js";
       if (document.querySelector(`script[src="${linkJquery}"]`)) {
-        console.log("Уже есть jquery");
+        console.log("Уже есть JQuery".yellow);
         return;
       } else {
         const script = document.createElement("script"); // исправлено
@@ -125,6 +130,7 @@ class PageModifier {
         head.appendChild(script);
       }
     });
+    console.log("JQuery установлен в head".green);
   }
   // Method implement edit the tag "a" clearing the href attribute
   async clearLinkTag() {
@@ -148,6 +154,7 @@ class PageModifier {
         console.log(err);
       }
     }
+    console.log("в теге <img> поменян путь на './images/...'".green);
   }
   // Method implement after all edit , it function update our html
   async updateHtml() {
@@ -158,7 +165,7 @@ class PageModifier {
       if (err) {
         throw err;
       }
-      console.log("File created");
+      console.log("HTML файл обновлен".green);
     });
   }
   // Method implement finally the script and close the browser
