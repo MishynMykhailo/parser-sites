@@ -15,6 +15,12 @@ class FileManager {
       }
     }
   }
+  async createFolders() {
+    await this.createSrcFolder();
+    await this.createCssFolder();
+    await this.createJsFolder();
+    await this.createImagesFolder();
+  }
   // Method implement create folder "src"
   async createSrcFolder() {
     try {

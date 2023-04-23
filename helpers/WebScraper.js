@@ -22,7 +22,7 @@ class WebScraper {
     });
   }
   //  Method implement create page for parser
-  async createPage(duration = 30000) {
+  async createPage(duration = "30000") {
     this.page = await this.browser.newPage();
     this.page.setDefaultNavigationTimeout(duration);
   }
@@ -49,14 +49,15 @@ class WebScraper {
   //  Method implement parse full content in HTML
   async parseContent() {
     await this.page.waitForSelector("html", { visible: true });
+    await this.page.evaluate(() => {
+      window.scrollBy(0, 2000);
+    });
     return await this.page.content();
   }
   // //  Method implement find js scripts on a page
   async searchJsForPage(createFile, P_LINK) {
-    const scripts = await this.page.$$eval(
-      'script[type="text/javascript"]',
-      (elements) =>
-        elements.map((el) => el.src).filter((e) => e.includes(".js"))
+    const scripts = await this.page.$$eval("script", (elements) =>
+      elements.map((el) => el.src).filter((e) => e.includes(".js"))
     );
     for (let script of scripts) {
       const response = await this.page.goto(script);
@@ -71,10 +72,8 @@ class WebScraper {
   }
   //  Method implement find css links on a page
   async searchCssForPage(createFile, P_LINK) {
-    const linkCss = await this.page.$$eval(
-      'link[rel="stylesheet"]',
-      (elements) =>
-        elements.map((el) => el.href).filter((e) => e.includes(".css"))
+    const linkCss = await this.page.$$eval("link", (elements) =>
+      elements.map((el) => el.href).filter((e) => e.includes(".css"))
     );
     for (let link of linkCss) {
       const response = await this.page.goto(link);

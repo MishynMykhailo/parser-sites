@@ -55,7 +55,6 @@ class PageModifier {
       } catch (err) {
         console.log(err);
       }
-      console.log("Тег <link> почищен".green);
     }
     const files = await fs.readdir("./src/css");
     try {
@@ -74,7 +73,6 @@ class PageModifier {
     } catch (err) {
       console.log(err);
     }
-    console.log("Тег <link> из существующих файлов css добавлен в head".green);
   }
   // Method implement edit js script in html file
   async editJsScript() {
@@ -134,7 +132,13 @@ class PageModifier {
   }
   // Method implement edit the tag "a" clearing the href attribute
   async clearLinkTag() {
-    await this.page.$$eval("a", (e) => e.map((el) => el.href == "#"));
+    await this.page.$$eval("a", (e) =>
+      e.map((el) => {
+        el.href = "#";
+        if (el.hasAttribute("onclick")) el.removeAttribute("onclick");
+        if (el.hasAttribute("target")) el.removeAttribute("target");
+      })
+    );
   }
   // Method implement edit img to specify the required path
   async editImages() {
