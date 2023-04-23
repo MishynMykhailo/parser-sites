@@ -60,13 +60,17 @@ class WebScraper {
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
     );
     for (let script of scripts) {
-      const response = await this.page.goto(script);
-      const data = await response.buffer();
-      const fileName = script.substring(
-        script.lastIndexOf("/") + 1,
-        script.lastIndexOf(".js") + 3
-      );
-      await createFile(fileName, data);
+      try {
+        const response = await this.page.goto(script);
+        const data = await response.buffer();
+        const fileName = script.substring(
+          script.lastIndexOf("/") + 1,
+          script.lastIndexOf(".js") + 3
+        );
+        await createFile(fileName, data);
+      } catch (error) {
+        console.log(`error,${error}`.red);
+      }
     }
     await this.gotoLink(P_LINK);
   }

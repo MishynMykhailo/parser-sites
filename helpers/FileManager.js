@@ -20,6 +20,7 @@ class FileManager {
     await this.createCssFolder();
     await this.createJsFolder();
     await this.createImagesFolder();
+    await this.createFontsFolder();
   }
   // Method implement create folder "src"
   async createSrcFolder() {
@@ -60,7 +61,15 @@ class FileManager {
       console.log("Папка 'images' уже существует!".yellow);
     }
   }
-
+  // Method implement create folder "images"
+  async createFontsFolder() {
+    try {
+      await fs.mkdir("./src/fonts");
+      console.log("Папка 'fonts' успешно создана!".green);
+    } catch (error) {
+      console.log("Папка 'fonts' уже существует!".yellow);
+    }
+  }
   // Method implement create file "html"
   async createIndexHtml(htmlContent) {
     try {
