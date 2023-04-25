@@ -152,6 +152,9 @@ class PageModifier {
               "src",
               `./images/${el.src.substring(el.src.lastIndexOf("/") + 1)}`
             );
+            if (!el.hasAttribute("loading")) {
+              el.setAttribute("loading", "lazy");
+            }
           });
         });
       } catch (err) {
