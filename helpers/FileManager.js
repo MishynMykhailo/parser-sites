@@ -22,6 +22,21 @@ class FileManager {
     await this.createImagesFolder();
     await this.createFontsFolder();
   }
+
+  async deleteSrcFolder(booleanAnswer) {
+    try {
+      if ((await this.checkIfDirectoryExists("./src")) && booleanAnswer) {
+        await fs.rmdir("./src", { recursive: true });
+        console.log("Папка src удалена".green);
+      } else {
+        throw new Error(
+          "Директория не существует или пользователь не дал согласия на ее удаление."
+        );
+      }
+    } catch (error) {
+      console.log(`Не удалось удалить папку src. Ошибка: ${error.message}`.red);
+    }
+  }
   // Method implement create folder "src"
   async createSrcFolder() {
     try {

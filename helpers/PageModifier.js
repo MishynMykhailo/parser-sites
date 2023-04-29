@@ -36,8 +36,8 @@ class PageModifier {
       const removeBase = document.querySelector("base");
       if (removeBase) {
         removeBase.remove();
+        console.log("Тег <base> удален".green);
       }
-      console.log("Тег <base> удален".green);
     });
   }
   // Method implement edit css link in html file
