@@ -93,12 +93,30 @@ class WebScraper {
   }
   //  Method implement find img tags on a page
   async searchImageForPage(createFile, P_LINK) {
+    // img teg for all images
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of images) {
       try {
         const response = await this.page.goto(image);
         const data = await response.buffer();
         const fileName = image.substring(image.lastIndexOf("/") + 1);
+        await createFile(fileName, data);
+      } catch (err) {
+        console.log("Произошла ошибка при загрузке изображения", err.message);
+        continue;
+      }
+    }
+    await this.gotoLink(P_LINK);
+
+    // source teg for Webp images
+    const sources = await this.page.$$eval("source", (e) =>
+      e.map((el) => el.srcset.split(" ")[0].replace("./", ""))
+    );
+    for (let source of sources) {
+      try {
+        const response = await this.page.goto(this.page.url() + source);
+        const data = await response.buffer();
+        const fileName = source.substring(source.lastIndexOf("/") + 1);
         await createFile(fileName, data);
       } catch (err) {
         console.log("Произошла ошибка при загрузке изображения", err.message);

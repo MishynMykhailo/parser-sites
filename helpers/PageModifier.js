@@ -83,8 +83,9 @@ class PageModifier {
       try {
         const files = await fs.readdir("./src/js");
         await this.page.$$eval("script", (elements) => {
+          console.log(elements);
           elements.forEach((el) => {
-            if (el.src !== null) el.remove();
+            if (el.hasAttribute("src")) el.remove();
           });
         });
       } catch (err) {
