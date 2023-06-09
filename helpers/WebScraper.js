@@ -1,7 +1,9 @@
 const puppeteer = require("puppeteer");
 require("colors");
 require("dotenv").config();
-
+const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 // Class that implements parsed site
 class WebScraper {
   constructor() {
@@ -93,12 +95,15 @@ class WebScraper {
   }
   //  Method implement find img tags on a page
   async searchImageForPage(createFile, P_LINK) {
-    // img teg for all images
+    // img tag for all images
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of images) {
       try {
-        const response = await this.page.goto(image);
-        const data = await response.buffer();
+        const response = await axios.get(image, {
+          responseType: "arraybuffer",
+        });
+        const data = response.data;
+
         const fileName = image.substring(image.lastIndexOf("/") + 1);
         await createFile(fileName, data);
       } catch (err) {
@@ -106,16 +111,19 @@ class WebScraper {
         continue;
       }
     }
+
     await this.gotoLink(P_LINK);
 
-    // source teg for Webp images
+    // source tag for Webp images
     const sources = await this.page.$$eval("source", (e) =>
       e.map((el) => el.srcset.split(" ")[0].replace("./", ""))
     );
     for (let source of sources) {
       try {
-        const response = await this.page.goto(this.page.url() + source);
-        const data = await response.buffer();
+        const response = await axios.get(this.page.url() + source, {
+          responseType: "arraybuffer",
+        });
+        const data = response.data;
         const fileName = source.substring(source.lastIndexOf("/") + 1);
         await createFile(fileName, data);
       } catch (err) {
@@ -123,6 +131,7 @@ class WebScraper {
         continue;
       }
     }
+
     await this.gotoLink(P_LINK);
   }
   //  Method implement closed broser after compliting all tasks

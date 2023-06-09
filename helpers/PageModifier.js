@@ -49,30 +49,20 @@ class PageModifier {
       try {
         await this.page.$$eval("link", (elements) => {
           elements.forEach((el) => {
-            if (el.href !== null) el.remove();
+            if (el.hasAttribute("rel") && el.getAttribute("rel") === "icon"){
+              return el.setAttribute("href",`./images/${el.href.substring(el.href.lastIndexOf("/") + 1)}`);
+            }
+              el.setAttribute(
+                "href",
+                `./css/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
+              );
           });
         });
       } catch (err) {
         console.log(err);
       }
     }
-    const files = await fs.readdir("./src/css");
-    try {
-      for (const file of files) {
-        await this.page.$eval(
-          "head",
-          (head, file) => {
-            const linkCss = document.createElement("link");
-            linkCss.setAttribute("rel", "stylesheet");
-            linkCss.setAttribute("href", `./css/${file}`);
-            head.appendChild(linkCss);
-          },
-          file
-        );
-      }
-    } catch (err) {
-      console.log(err);
-    }
+    console.log("в теге <link> поменян путь на './css/...'".green);
   }
   // Method implement edit js script in html file
   async editJsScript() {
