@@ -25,9 +25,8 @@ class PageModifier {
     this.page.setDefaultNavigationTimeout(duration);
   }
   //  Method implement naviagte on a page
-  async gotoLink() {
-    console.log(this.pathDir);
-    await this.page.goto(this.pathDir);
+  async gotoLink(direction = this.pathDir) {
+    await this.page.goto(direction);
     await this.page.waitForSelector("html", { visible: true });
   }
   // Method implement delete preset settings, for example <base>
@@ -49,13 +48,16 @@ class PageModifier {
       try {
         await this.page.$$eval("link", (elements) => {
           elements.forEach((el) => {
-            if (el.hasAttribute("rel") && el.getAttribute("rel") === "icon"){
-              return el.setAttribute("href",`./images/${el.href.substring(el.href.lastIndexOf("/") + 1)}`);
-            }
-              el.setAttribute(
+            if (el.hasAttribute("rel") && el.getAttribute("rel") === "icon") {
+              return el.setAttribute(
                 "href",
-                `./css/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
+                `./images/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
               );
+            }
+            el.setAttribute(
+              "href",
+              `./css/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
+            );
           });
         });
       } catch (err) {
@@ -154,6 +156,35 @@ class PageModifier {
     }
     console.log("в теге <img> поменян путь на './images/...'".green);
   }
+  async editCss() {
+    const styles = await this.page.evaluate(() => {
+      const styleTags = document.querySelectorAll("style");
+      styleTags.forEach((styleTag) => {
+        const updatedStyleContent = styleTag.innerHTML.replace(
+          /background-image:\s*url\(img\//g,
+          "background-image: url(image/"
+        );
+        styleTag.innerHTML = updatedStyleContent;
+      });
+    });
+  }
+  async editCssProperty() {
+    const files = await fs.readdir("./src/css");
+
+    for (let file of files) {
+      const cssFilePath = path.join(__dirname, "../src/css", file);
+      const cssContent = await fs.readFile(cssFilePath, "utf8");
+
+      const updatedContent = cssContent.replace(
+        /background-image:\s*url\(\.\.\/img\//g,
+        "background-image: url(../image/"
+      );
+
+      await fs.writeFile(cssFilePath, updatedContent, "utf8");
+    }
+    console.log("Файл css обновлен background-image.".green);
+  }
+
   // Method implement after all edit , it function update our html
   async updateHtml() {
     console.log("update");

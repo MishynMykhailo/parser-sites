@@ -7,16 +7,24 @@ const readline = require("readline").createInterface({
   input: process.stdin,
   output: process.stdout,
 });
-readline.question("Введите 'Y/y' или 'N/n': ", (answer) => {
-  if (answer.toLowerCase() === "y") {
-    main(true);
-  } else if (answer.toLowerCase() === "n") {
-    main(false);
-  } else {
-    console.log("Вы ввели неправильный ответ");
+(() => {
+  function askDeleteFolders() {
+   
+    readline.question("Удалить папку 'src'? Введите 'Y/y' или 'N/n': ", (answer) => {
+      if (answer.toLowerCase() === "y") {
+        main(true);
+      } else if (answer.toLowerCase() === "n") {
+        main(false);
+      } else {
+        console.log("Вы ввели неправильный ответ".yellow);
+        askDeleteFolders();
+      }
+      readline.close();
+    });
   }
-  readline.close();
-});
+  askDeleteFolders();
+
+})();
 async function main(deleteAnswer) {
   // parsing site
   const scraper = new WebScraper();
@@ -34,7 +42,7 @@ async function main(deleteAnswer) {
   await scraper.searchCssForPage(fileManager.createCssFile, P_LINK);
   await scraper.searchImageForPage(fileManager.createImageFile, P_LINK);
   await scraper.closeBrowser();
-  // edit src
+  // // edit src
   await pageModifier.initializeModifier();
   await pageModifier.createPage(120000);
   await pageModifier.gotoLink();
@@ -44,6 +52,8 @@ async function main(deleteAnswer) {
   await pageModifier.editJqueryScript();
   await pageModifier.editImages();
   await pageModifier.clearLinkTag();
+  await pageModifier.editCss();
+  await pageModifier.editCssProperty();
   await pageModifier.updateHtml();
   await pageModifier.closeBrowser();
 }
