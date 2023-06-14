@@ -162,7 +162,7 @@ class PageModifier {
       styleTags.forEach((styleTag) => {
         const updatedStyleContent = styleTag.innerHTML.replace(
           /background-image:\s*url\(img\//g,
-          "background-image: url(image/"
+          "background-image: url(images/"
         );
         styleTag.innerHTML = updatedStyleContent;
       });
@@ -177,7 +177,7 @@ class PageModifier {
 
       const updatedContent = cssContent.replace(
         /background-image:\s*url\(\.\.\/img\//g,
-        "background-image: url(../image/"
+        "background-image: url(../images/"
       );
 
       await fs.writeFile(cssFilePath, updatedContent, "utf8");
