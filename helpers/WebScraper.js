@@ -57,14 +57,35 @@ class WebScraper {
     return await this.page.content();
   }
   // //  Method implement find js scripts on a page
+  // async searchJsForPage(createFile, P_LINK) {
+  //   const scripts = await this.page.$$eval("script", (elements) =>
+  //     elements.map((el) => el.src).filter((e) => e.includes(".js"))
+  //   );
+  //   for (let script of scripts) {
+  //     try {
+  //       const response = await this.page.goto(script);
+  //       const data = await response.buffer();
+  //       const fileName = script.substring(
+  //         script.lastIndexOf("/") + 1,
+  //         script.lastIndexOf(".js") + 3
+  //       );
+  //       await createFile(fileName, data);
+  //     } catch (error) {
+  //       console.log(`error,${error}`.red);
+  //     }
+  //   }
+  //   await this.gotoLink(P_LINK);
+  // }
   async searchJsForPage(createFile, P_LINK) {
     const scripts = await this.page.$$eval("script", (elements) =>
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
     );
     for (let script of scripts) {
       try {
-        const response = await this.page.goto(script);
-        const data = await response.buffer();
+        const response = await axios.get(script, {
+          responseType: "arraybuffer",
+        });
+        const data = await response.data;
         const fileName = script.substring(
           script.lastIndexOf("/") + 1,
           script.lastIndexOf(".js") + 3
@@ -72,6 +93,7 @@ class WebScraper {
         await createFile(fileName, data);
       } catch (error) {
         console.log(`error,${error}`.red);
+        console.log(script);
       }
     }
     await this.gotoLink(P_LINK);
@@ -82,7 +104,8 @@ class WebScraper {
       elements.map((el) => el.href).filter((e) => e.includes(".css"))
     );
     for (let link of linkCss) {
-      const response = await this.page.goto(link);
+      try {
+        const response = await this.page.goto(link);
       const data = await response.buffer();
 
       let fileName = link.substring(
@@ -90,6 +113,10 @@ class WebScraper {
         link.lastIndexOf(".css") + 4
       );
       await createFile(fileName, data);
+      } catch (error) {
+        console.log(`error,${error}`.red);
+        console.log(link);
+     }
     }
     await this.gotoLink(P_LINK);
   }
