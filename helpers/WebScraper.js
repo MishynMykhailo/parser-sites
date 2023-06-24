@@ -106,17 +106,17 @@ class WebScraper {
     for (let link of linkCss) {
       try {
         const response = await this.page.goto(link);
-      const data = await response.buffer();
+        const data = await response.buffer();
 
-      let fileName = link.substring(
-        link.lastIndexOf("/") + 1,
-        link.lastIndexOf(".css") + 4
-      );
-      await createFile(fileName, data);
+        let fileName = link.substring(
+          link.lastIndexOf("/") + 1,
+          link.lastIndexOf(".css") + 4
+        );
+        await createFile(fileName, data);
       } catch (error) {
         console.log(`error,${error}`.red);
         console.log(link);
-     }
+      }
     }
     await this.gotoLink(P_LINK);
   }
@@ -143,7 +143,9 @@ class WebScraper {
 
     // source tag for Webp images
     const sources = await this.page.$$eval("source", (e) =>
-      e.map((el) => el.srcset.split(" ")[0].replace("./", ""))
+      e.map((el) => {
+        return el.srcset.split(" ")[0].replace("./", "");
+      })
     );
     for (let source of sources) {
       try {
@@ -154,6 +156,7 @@ class WebScraper {
         const fileName = source.substring(source.lastIndexOf("/") + 1);
         await createFile(fileName, data);
       } catch (err) {
+        console.log(this.page.url() + source);
         console.log("Произошла ошибка при загрузке изображения", err.message);
         continue;
       }
