@@ -9,21 +9,22 @@ const readline = require("readline").createInterface({
 });
 (() => {
   function askDeleteFolders() {
-   
-    readline.question("Удалить папку 'src'? Введите 'Y/y' или 'N/n': ", (answer) => {
-      if (answer.toLowerCase() === "y") {
-        main(true);
-      } else if (answer.toLowerCase() === "n") {
-        main(false);
-      } else {
-        console.log("Вы ввели неправильный ответ".yellow);
-        askDeleteFolders();
+    readline.question(
+      "Удалить папку 'src'? Введите 'Y/y' или 'N/n': ",
+      (answer) => {
+        if (answer.toLowerCase() === "y") {
+          main(true);
+        } else if (answer.toLowerCase() === "n") {
+          main(false);
+        } else {
+          console.log("Вы ввели неправильный ответ".yellow);
+          askDeleteFolders();
+        }
+        readline.close();
       }
-      readline.close();
-    });
+    );
   }
   askDeleteFolders();
-
 })();
 async function main(deleteAnswer) {
   // parsing site
@@ -43,7 +44,7 @@ async function main(deleteAnswer) {
   await scraper.searchImageForPage(fileManager.createImageFile, P_LINK);
   await scraper.closeBrowser();
   // // edit src
-  await pageModifier.initializeModifier();
+  await pageModifier.initializeModifier("false");
   await pageModifier.createPage(120000);
   await pageModifier.gotoLink();
   await pageModifier.clearPresetSettings();

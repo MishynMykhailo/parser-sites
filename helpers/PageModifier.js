@@ -12,10 +12,10 @@ class PageModifier {
     this.pathDir = path.resolve("file:///", __dirname, "../src/index.html");
   }
   // Method implement initializes pupetter browser
-  async initializeModifier(PROX_SERVER, headless = "true") {
+  async initializeModifier(headless = "true") {
     this.browser = await puppeteer.launch({
       executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-      headless: false,
+      headless: headless,
       ignoreHTTPSErrors: true,
     });
   }

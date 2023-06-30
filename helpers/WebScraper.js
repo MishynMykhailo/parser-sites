@@ -2,8 +2,6 @@ const puppeteer = require("puppeteer");
 require("colors");
 require("dotenv").config();
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 // Class that implements parsed site
 class WebScraper {
   constructor() {
