@@ -132,7 +132,7 @@ class WebScraper {
         const fileName = image.substring(image.lastIndexOf("/") + 1);
         await createFile(fileName, data);
       } catch (err) {
-        console.log("Произошла ошибка при загрузке изображения", err.message);
+        console.log("Произошла ошибка при загрузке изображения",image, err.message);
         continue;
       }
     }
@@ -155,7 +155,7 @@ class WebScraper {
         await createFile(fileName, data);
       } catch (err) {
         console.log(this.page.url() + source);
-        console.log("Произошла ошибка при загрузке изображения", err.message);
+        console.log("Произошла ошибка при загрузке изображения",source, err.message);
         continue;
       }
     }
