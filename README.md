@@ -1,0 +1,2 @@
+# What is the purpose of this project?
+This project is needed for parsing sites, which I do most of my work on the traffic arbitrage team. It helps pump out the right target sites that media buyers use to promote products.
