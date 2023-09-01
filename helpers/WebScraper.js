@@ -54,26 +54,9 @@ class WebScraper {
     });
     return await this.page.content();
   }
-  // //  Method implement find js scripts on a page
-  // async searchJsForPage(createFile, P_LINK) {
-  //   const scripts = await this.page.$$eval("script", (elements) =>
-  //     elements.map((el) => el.src).filter((e) => e.includes(".js"))
-  //   );
-  //   for (let script of scripts) {
-  //     try {
-  //       const response = await this.page.goto(script);
-  //       const data = await response.buffer();
-  //       const fileName = script.substring(
-  //         script.lastIndexOf("/") + 1,
-  //         script.lastIndexOf(".js") + 3
-  //       );
-  //       await createFile(fileName, data);
-  //     } catch (error) {
-  //       console.log(`error,${error}`.red);
-  //     }
-  //   }
-  //   await this.gotoLink(P_LINK);
-  // }
+  // Method implement find js scripts on a page
+
+  
   async searchJsForPage(createFile, P_LINK) {
     const scripts = await this.page.$$eval("script", (elements) =>
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
