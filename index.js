@@ -43,7 +43,7 @@ async function main(deleteAnswer) {
   await scraper.searchCssForPage(fileManager.createCssFile, P_LINK);
   await scraper.searchImageForPage(fileManager.createImageFile, P_LINK);
   await scraper.closeBrowser();
-  // // edit src
+  // // // edit src
   await pageModifier.initializeModifier("false");
   await pageModifier.createPage(120000);
   await pageModifier.gotoLink();
