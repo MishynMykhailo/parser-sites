@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 require("colors");
 require("dotenv").config();
 const axios = require("axios");
-const { RequestError } = require("../helpers/RequestError");
+const RequestError = require("../helpers/RequestError");
 // Class that implements parsed site
 // Добавить в консткрутор this.image и сюда через push добавлять images линки полученные при загрузке файлов в createPage
 class WebScraper {
@@ -51,7 +51,7 @@ class WebScraper {
               request.abort();
             }
             break;
-     
+
           default:
             request.continue();
             // console.log(`Loaded resource: ${url}, Resource type: ${type}`);
@@ -59,7 +59,7 @@ class WebScraper {
         }
       });
     } catch (error) {
-      throw RequestError(500, `I can't create browser page:${error.message}`);
+      new RequestError(500, `I can't create browser page:${error.message}`);
     }
   }
   //  Method implement authenticate proxy for parser, if any PROX_LOGIN and PROX_PASS
@@ -76,15 +76,17 @@ class WebScraper {
       console.log("Подключение к прокси прошло успешно".brightGreen.bold);
     } catch (error) {
       // console.log("Ошибка при подключении к прокси");
-      throw RequestError(401, `Unused login or password to the proxy`);
+      new RequestError(401, `Unused login or password to the proxy`);
     }
   }
   //  Method implement naviagte on a page
   async gotoLink(P_LINK) {
     try {
+      console.log(this.images);
+
       await this.page.goto(`${P_LINK}`);
     } catch (error) {
-      throw RequestError(500, "Pagination error, try again");
+      new RequestError(500, "Pagination error, try again");
     }
   }
   //  Method implement parse full content in HTML
@@ -96,10 +98,10 @@ class WebScraper {
       });
       return await this.page.content();
     } catch (error) {
-      throw RequestError(500, "Error in parsing");
+      new RequestError(500, "Error in parsing");
     }
   }
-  async searchFontsOnPage({ pathFolder, createFile, P_LINK }) {}
+  // async searchFontsOnPage({ pathFolder, createFile, P_LINK }) {}
 
   async searchJsForPage({ pathFolder, createFile, P_LINK }) {
     const scripts = await this.page.$$eval("script", (elements) =>
@@ -117,7 +119,7 @@ class WebScraper {
         );
         await createFile({ pathFolder, fileName, data });
       } catch (error) {
-        console.log(`error,${error}`.red);
+        console.log(`JS error,${error}`.red);
       }
     }
     await this.gotoLink(P_LINK);
