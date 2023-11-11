@@ -82,8 +82,6 @@ class WebScraper {
   //  Method implement naviagte on a page
   async gotoLink(P_LINK) {
     try {
-      console.log(this.images);
-
       await this.page.goto(`${P_LINK}`);
     } catch (error) {
       new RequestError(500, "Pagination error, try again");
@@ -101,9 +99,9 @@ class WebScraper {
       new RequestError(500, "Error in parsing");
     }
   }
-  // async searchFontsOnPage({ pathFolder, createFile, P_LINK }) {}
+  // async searchFontsOnPage(createFile, P_LINK) {}
 
-  async searchJsForPage({ pathFolder, createFile, P_LINK }) {
+  async searchJsForPage(createFile, P_LINK) {
     const scripts = await this.page.$$eval("script", (elements) =>
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
     );
@@ -117,7 +115,7 @@ class WebScraper {
           script.lastIndexOf("/") + 1,
           script.lastIndexOf(".js") + 3
         );
-        await createFile({ pathFolder, fileName, data });
+        await createFile(fileName, data);
       } catch (error) {
         console.log(`JS error,${error}`.red);
       }
@@ -125,7 +123,7 @@ class WebScraper {
     await this.gotoLink(P_LINK);
   }
   //  Method implement find css links on a page
-  async searchCssForPage({ pathFolder, createFile, P_LINK }) {
+  async searchCssForPage(createFile, P_LINK) {
     const linkCss = await this.page.$$eval("link", (elements) =>
       elements.map((el) => el.href).filter((e) => e.includes(".css"))
     );
@@ -138,7 +136,7 @@ class WebScraper {
           link.lastIndexOf("/") + 1,
           link.lastIndexOf(".css") + 4
         );
-        await createFile({ pathFolder, fileName, data });
+        await createFile(fileName, data);
       } catch (error) {
         console.log(`Link-ERROR${error}`.red);
       }
@@ -146,18 +144,17 @@ class WebScraper {
     await this.gotoLink(P_LINK);
   }
   //  Method implement find img tags on a page
-  async searchImageForPage({ pathFolder, createFile, P_LINK }) {
+  async searchImageForPage(createFile, P_LINK) {
     // img tag for all images
     // const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of this.images) {
-      console.log("image", image);
       try {
         const response = await axios.get(image, {
           responseType: "arraybuffer",
         });
         const data = response.data;
         const fileName = image.substring(image.lastIndexOf("/") + 1);
-        await createFile({ pathFolder, fileName, data });
+        await createFile(fileName, data);
       } catch (err) {
         console.log("Произошла ошибка при загрузке изображения", err.message);
         continue;
@@ -177,7 +174,7 @@ class WebScraper {
         });
         const data = response.data;
         const fileName = source.substring(source.lastIndexOf("/") + 1);
-        await createFile({ pathFolder, fileName, data });
+        await createFile(fileName, data);
       } catch (err) {
         console.log("Произошла ошибка при загрузке изображения", err.message);
         continue;
