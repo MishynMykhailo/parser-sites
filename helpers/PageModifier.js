@@ -154,6 +154,24 @@ class PageModifier {
         console.log(err);
       }
     }
+    const sources = await this.page.$$eval("source", (e) =>
+      e.map((el) => el.srcset
+      )
+    );
+      for (let i = 0; i < sources.length; i += 1) {
+        try {
+          await this.page.$$eval("source", (elements) => {
+            elements.forEach((el) => {
+              el.setAttribute(
+                "srcset",
+                `./images/${el.srcset.substring(el.srcset.lastIndexOf("/") + 1)}`
+              );
+            });
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }
     console.log("в теге <img> поменян путь на './images/...'".green);
   }
   async editCss() {

@@ -10,6 +10,8 @@ class WebScraper {
     this.browser = null;
     this.page = null;
     this.images = [];
+    this.stylesheets = [];
+    this.fonts = [];
   }
   // Method implement initiaalize browser for parser
   async initializeParser(PROX_SERVER, headless = "true") {
@@ -41,7 +43,18 @@ class WebScraper {
             }
             request.abort();
             break;
-
+          case "stylesheet":
+            if (!this.stylesheets.includes(url)) {
+              this.stylesheets.push(url);
+            }
+            request.abort();
+            break;
+          case "font":
+            if (!this.fonts.includes(url)) {
+              this.fonts.push(url);
+            }
+            request.abort();
+            break;
           case "other":
             const imageFormats = ["png", "jpg", "webp"];
             if (imageFormats.some((format) => url.includes(format))) {
@@ -91,14 +104,32 @@ class WebScraper {
   async parseContent() {
     try {
       await this.page.waitForSelector("html", { visible: true });
-      await this.page.evaluate(() => {
-        window.scrollBy(0, 2000);
-      });
+
+      const smoothScroll = async () => {
+        const maxHeight = document.body.scrollHeight;
+        const duration = 1000;
+        const increment = 20;
+
+        for (let i = 0; i <= duration; i += increment) {
+          const position = (maxHeight * i) / duration;
+          window.scrollTo(0, position);
+          await new Promise((resolve) => setTimeout(resolve, increment));
+        }
+      };
+
+      // Вызываем плавную прокрутку
+      await this.page.evaluate(smoothScroll);
+
+      // Дождемся, пока скролл не завершится
+      await this.page.waitForTimeout(1000); // Подождем еще 1 секунду (вы можете увеличить время ожидания, если необходимо)
+
       return await this.page.content();
     } catch (error) {
-      new RequestError(500, "Error in parsing");
+      console.error("Error in parsing:", error);
+      throw new RequestError(500, "Error in parsing");
     }
   }
+
   // async searchFontsOnPage(createFile, P_LINK) {}
 
   async searchJsForPage(createFile, P_LINK) {
