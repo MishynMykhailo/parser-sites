@@ -3,6 +3,7 @@ const FileManager = require("./helpers/FileManager.js");
 const PageModifier = require("./helpers/PageModifier.js");
 require("dotenv").config();
 const { P_LINK, PROX_SERVER, PROX_LOGIN, PROX_PASS } = process.env;
+
 const readline = require("readline").createInterface({
   input: process.stdin,
   output: process.stdout,
