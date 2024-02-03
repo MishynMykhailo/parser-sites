@@ -41,4 +41,16 @@ async function main(deleteAnswer) {
   await pageModifier.updateHtml();
   await pageModifier.closeBrowser();
 }
-main();
+readline.question(
+  "Do you want to delete the 'src' folder? (y/n) ",
+  (answer) => {
+    if (answer.toLowerCase() === "y") {
+      main(true);
+    } else if (answer.toLowerCase() === "n") {
+      main(false);
+    } else {
+      console.log("Invalid input. Please enter 'y' or 'n'.");
+      readline.close();
+    }
+  }
+);
