@@ -133,8 +133,19 @@ class PageModifier {
       })
     );
   }
+  // Method wrap img tag in a tag
+  async wrapImage() {
+    await this.page.$$eval("img", (e) => {
+      e.map((item) => {
+        const createTagA = document.createElement("a");
+        createTagA.appendChild(item.cloneNode(true));
+        item.replaceWith(createTagA);
+      });
+    });
+  }
   // Method implement edit img to specify the required path
   async editImages() {
+    await this.wrapImage();
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let i = 0; i < images.length; i += 1) {
       try {
@@ -155,23 +166,22 @@ class PageModifier {
       }
     }
     const sources = await this.page.$$eval("source", (e) =>
-      e.map((el) => el.srcset
-      )
+      e.map((el) => el.srcset)
     );
-      for (let i = 0; i < sources.length; i += 1) {
-        try {
-          await this.page.$$eval("source", (elements) => {
-            elements.forEach((el) => {
-              el.setAttribute(
-                "srcset",
-                `./images/${el.srcset.substring(el.srcset.lastIndexOf("/") + 1)}`
-              );
-            });
+    for (let i = 0; i < sources.length; i += 1) {
+      try {
+        await this.page.$$eval("source", (elements) => {
+          elements.forEach((el) => {
+            el.setAttribute(
+              "srcset",
+              `./images/${el.srcset.substring(el.srcset.lastIndexOf("/") + 1)}`
+            );
           });
-        } catch (err) {
-          console.log(err);
-        }
+        });
+      } catch (err) {
+        console.log(err);
       }
+    }
     console.log("в теге <img> поменян путь на './images/...'".green);
   }
   async editCss() {

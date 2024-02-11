@@ -51,6 +51,7 @@ readline.question(
     } else {
       console.log("Invalid input. Please enter 'y' or 'n'.");
       readline.close();
+      
     }
   }
 );
