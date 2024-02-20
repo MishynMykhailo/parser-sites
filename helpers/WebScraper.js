@@ -146,6 +146,7 @@ class WebScraper {
           script.lastIndexOf("/") + 1,
           script.lastIndexOf(".js") + 3
         );
+        
         await createFile(fileName, data);
       } catch (error) {
         console.log(`JS error,${error}`.red);

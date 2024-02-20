@@ -130,6 +130,12 @@ class PageModifier {
         el.href = "#";
         if (el.hasAttribute("onclick")) el.removeAttribute("onclick");
         if (el.hasAttribute("target")) el.removeAttribute("target");
+        if (el.hasAttribute("data-elementdataevent")) {
+          el.removeAttribute("data-elementdataevent");
+        }
+        if (el.hasAttribute("elementdataevent")) {
+          el.removeAttribute("elementdataevent");
+        }
       })
     );
   }
@@ -138,6 +144,7 @@ class PageModifier {
     await this.page.$$eval("img", (e) => {
       e.map((item) => {
         const createTagA = document.createElement("a");
+        createTagA.setAttribute("href", "#");
         createTagA.appendChild(item.cloneNode(true));
         item.replaceWith(createTagA);
       });
@@ -145,7 +152,7 @@ class PageModifier {
   }
   // Method implement edit img to specify the required path
   async editImages() {
-    await this.wrapImage();
+    // await this.wrapImage();
     const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let i = 0; i < images.length; i += 1) {
       try {
