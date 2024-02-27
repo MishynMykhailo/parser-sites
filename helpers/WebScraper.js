@@ -180,24 +180,21 @@ class WebScraper {
     // img tag for all images
     // const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of this.images) {
-        console.log(image);
-
       try {
-        const response = !image.includes("webp")
-          ? await axios.get(image, {
-              responseType: "arraybuffer",
-            })
-          : await axios.get(image, {
-              responseType: "arrayBuffer",
-              headers: {
-                "User-Agent":
-                  "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-              },
-              referrerPolicy: "strict-origin-when-cross-origin",
-            });
-        const data = response.data;
-        const fileName = image.substring(image.lastIndexOf("/") + 1);
-        await createFile(fileName, data);
+        if (!image.includes("webp")) {
+          const response = await axios.get(image, {
+            responseType: "arraybuffer",
+          });
+
+          const data = response.data;
+          const fileName = image.substring(image.lastIndexOf("/") + 1);
+          await createFile(fileName, data);
+        } else {
+          const response = await fetch(image);
+          const data = await response.arrayBuffer();
+          const fileName = image.substring(image.lastIndexOf("/") + 1);
+          await createFile(fileName, data);
+        }
       } catch (err) {
         console.log("Произошла ошибка при загрузке изображения", err.message);
         continue;
