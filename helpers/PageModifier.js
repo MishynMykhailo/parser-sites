@@ -138,6 +138,7 @@ class PageModifier {
         }
       })
     );
+    console.log("Тег <a> почищен ".green);
   }
   // Method wrap img tag in a tag
   async wrapImage() {
