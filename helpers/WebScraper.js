@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer");
 require("colors");
 require("dotenv").config();
+const fetch = require("node-fetch");
 const axios = require("axios");
 const RequestError = require("../helpers/RequestError");
 // Class that implements parsed site
@@ -180,6 +181,7 @@ class WebScraper {
     // img tag for all images
     // const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of this.images) {
+      console.log(image);
       try {
         if (!image.includes("webp")) {
           const response = await axios.get(image, {
@@ -191,7 +193,9 @@ class WebScraper {
           await createFile(fileName, data);
         } else {
           const response = await fetch(image);
-          const data = await response.arrayBuffer();
+
+          const data = await response.buffer();
+          console.log(data);
           const fileName = image.substring(image.lastIndexOf("/") + 1);
           await createFile(fileName, data);
         }
