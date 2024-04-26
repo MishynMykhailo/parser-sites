@@ -39,6 +39,22 @@ class PageModifier {
       }
     });
   }
+  // add indvidual tag for div tags
+  async addIndividualTag(nameTag) {
+    await this.page.$$eval(
+      "div",
+      (elements, tag) => {
+        elements.forEach((e, index) => {
+          if (!e.classList.contains(tag) && !e.getAttribute("data-info")) {
+            e.classList.add(`${tag}-${index}`);
+            e.setAttribute("data-info", `${tag}-${index}`);
+          }
+        });
+      },
+      nameTag
+    );
+    console.log(`Добвлена метка ${nameTag}`.green);
+  }
   // Method implement edit css link in html file
   async editCssLink() {
     const linksCss = await this.page.$$eval("link", (elements) =>
