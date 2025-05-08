@@ -1,4 +1,6 @@
 const fs = require("fs/promises");
+require("colors");
+
 // Class that implements file manager functional
 class FileManager {
   constructor() {}
@@ -15,6 +17,7 @@ class FileManager {
       }
     }
   }
+
   async createFolders() {
     await this.createSrcFolder();
     await this.createCssFolder();
@@ -37,6 +40,7 @@ class FileManager {
       console.log(`Не удалось удалить папку src. Ошибка: ${error.message}`.red);
     }
   }
+
   // Method implement create folder "src"
   async createSrcFolder() {
     try {
@@ -76,7 +80,8 @@ class FileManager {
       console.log("Папка 'images' уже существует!".yellow);
     }
   }
-  // Method implement create folder "images"
+
+  // Method implement create folder "fonts"
   async createFontsFolder() {
     try {
       await fs.mkdir("./src/fonts");
@@ -85,10 +90,11 @@ class FileManager {
       console.log("Папка 'fonts' уже существует!".yellow);
     }
   }
+
   // Method implement create file "html"
   async createIndexHtml(htmlContent) {
     try {
-      await fs.writeFile("./src/index.html", htmlContent);
+      await fs.writeFile("./src/index.html", htmlContent, "utf8");
       console.log("Файл 'index.html' успешно создан!".green);
     } catch (err) {
       console.log(err.message.red);
@@ -99,7 +105,7 @@ class FileManager {
   async createJsFile(fileName, data) {
     try {
       await fs.writeFile(`./src/js/${fileName}`, data);
-      console.log("Файл 'js' успешно созданы".green);
+      console.log("Файл 'js' успешно создан".green);
     } catch (err) {
       console.log(err.message.red);
     }
@@ -109,7 +115,7 @@ class FileManager {
   async createCssFile(fileName, data) {
     try {
       await fs.writeFile(`./src/css/${fileName}`, data);
-      console.log("Файл 'css' успешно созданы".green);
+      console.log("Файл 'css' успешно создан".green);
     } catch (err) {
       console.log(err.red);
     }
@@ -119,7 +125,7 @@ class FileManager {
   async createImageFile(fileName, data) {
     try {
       await fs.writeFile(`./src/images/${fileName}`, data);
-      console.log("Файл 'images' успешно созданы".green);
+      console.log("Файл 'images' успешно создан".green);
     } catch (err) {
       console.log(err.red);
     }

@@ -4,8 +4,7 @@ require("dotenv").config();
 const fetch = require("node-fetch");
 const axios = require("axios");
 const RequestError = require("../helpers/RequestError");
-// Class that implements parsed site
-// Добавить в консткрутор this.image и сюда через push добавлять images линки полученные при загрузке файлов в createPage
+
 class WebScraper {
   constructor() {
     this.browser = null;
@@ -14,7 +13,7 @@ class WebScraper {
     this.stylesheets = [];
     this.fonts = [];
   }
-  // Method implement initiaalize browser for parser
+
   async initializeParser(PROX_SERVER, headless = "true") {
     this.browser = await puppeteer.launch({
       headless: headless,
@@ -27,56 +26,242 @@ class WebScraper {
       ],
     });
   }
-  //  Method implement create page for parser
-  async createPage(duration = "30000") {
+
+  // Метод для удаления элементов по тегу при загрузке страницы
+  async removeElementsOnLoad(page, tags = ["noscript"]) {
+    const selectorList = tags.map((tag) => `${tag}`).join(",");
+    await page.evaluateOnNewDocument((selectorList) => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const elements = document.querySelectorAll(selectorList);
+        elements.forEach((el) => el.remove());
+      });
+
+      // Optional: удалить сразу, если DOM уже есть (для SSR страниц)
+      const elements = document.querySelectorAll(selectorList);
+      elements.forEach((el) => el.remove());
+    }, selectorList);
+  }
+  // Отключение eval, atob
+  async injectSecurityGuards(page) {
+    await page.evaluateOnNewDocument(() => {
+      // 🔒 Заблокировать eval
+      const blockEval = () => {
+        window.eval = () => {
+          console.warn("Blocked: eval() is disabled");
+          return undefined;
+        };
+        try {
+          Object.defineProperty(window, "eval", {
+            configurable: false,
+            writable: false,
+            value: () => {
+              console.warn("Blocked: eval() is disabled");
+              return undefined;
+            },
+          });
+        } catch (e) {}
+      };
+
+      // 🔒 Заблокировать Function
+      const blockFunctionConstructor = () => {
+        window.Function = function () {
+          console.warn("Blocked: Function constructor is disabled");
+          return () => {};
+        };
+        try {
+          Object.defineProperty(window, "Function", {
+            configurable: false,
+            writable: false,
+            value: function () {
+              console.warn("Blocked: Function constructor is disabled");
+              return () => {};
+            },
+          });
+        } catch (e) {}
+      };
+
+      // 🔒 Заблокировать atob
+      const blockAtob = () => {
+        window.atob = () => {
+          console.warn("Blocked: atob() is disabled");
+          return "";
+        };
+        try {
+          Object.defineProperty(window, "atob", {
+            configurable: false,
+            writable: false,
+            value: () => {
+              console.warn("Blocked: atob() is disabled");
+              return "";
+            },
+          });
+        } catch (e) {}
+      };
+
+      blockEval();
+      blockFunctionConstructor();
+      blockAtob();
+    });
+  }
+  // перехват и удаление узлов с определенными ключевыми словами
+  async removeNodesWithKeywords(page, keywords = ["eval", "atob"]) {
+    const pattern = new RegExp(keywords.join("|"), "i");
+
+    await page.evaluateOnNewDocument((patternSource) => {
+      const pattern = new RegExp(patternSource, "i");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const tagChecks = {
+          script: (el) => pattern.test(el.textContent),
+          iframe: (el) =>
+            el.hasAttribute("srcdoc") &&
+            pattern.test(el.getAttribute("srcdoc")),
+          img: (el) => {
+            const onerror = el.getAttribute("onerror");
+            return onerror && pattern.test(onerror);
+          },
+          a: (el) => {
+            const href = el.getAttribute("href");
+            return href && href.startsWith("javascript:") && pattern.test(href);
+          },
+          "*": (el) => {
+            const attrs = ["onclick", "onload", "onmouseover", "onmouseenter"];
+            return attrs.some((attr) => {
+              const val = el.getAttribute(attr);
+              return val && pattern.test(val);
+            });
+          },
+        };
+
+        // Целевые теги для анализа
+        const targetTags = ["script", "iframe", "img", "a"];
+
+        targetTags.forEach((tag) => {
+          document.querySelectorAll(tag).forEach((el) => {
+            if (tagChecks[tag](el)) {
+              console.warn(`🧹 Removed <${tag}> due to keyword match`);
+              el.remove();
+            }
+          });
+        });
+
+        // Последний проход — проверка на общие JS-атрибуты (onclick, и т.п.)
+        document.querySelectorAll("*").forEach((el) => {
+          if (tagChecks["*"](el)) {
+            console.warn("🧹 Removed node with suspicious inline JS");
+            el.remove();
+          }
+        });
+      });
+    }, pattern.source);
+  }
+  //  для перехвата запросов
+  async setupRequestInterception(page, context = {}) {
+    const {
+      images = [],
+      stylesheets = [],
+      fonts = [],
+      blockedScriptKeywords = [],
+      allowedDomain,
+    } = context;
+
+    await page.setRequestInterception(true);
+
+    page.on("request", (request) => {
+      const url = request.url();
+      const type = request.resourceType();
+
+      const isNav = request.isNavigationRequest();
+      // 🛑 Блок редиректов за пределы домена
+      if (isNav && allowedDomain) {
+        const hostname = new URL(url).hostname;
+        if (!hostname.includes(allowedDomain)) {
+          console.warn("🚫 REDIRECT BLOCKED:", url);
+          return request.abort();
+        }
+      }
+
+      switch (type) {
+        case "image":
+          if (!images.includes(url)) images.push(url);
+          request.abort();
+          break;
+
+        case "script":
+          request.abort();
+          // const shouldBlock = blockedScriptKeywords.some((keyword) =>
+          //   url.includes(keyword)
+          // );
+
+          // if (shouldBlock) {
+          //   console.log("🛑 BLOCKED SCRIPT:", url);
+          //   request.abort();
+          // } else {
+          //   request.continue();
+          // }
+          break;
+
+        case "stylesheet":
+          if (!stylesheets.includes(url)) stylesheets.push(url);
+          request.abort();
+          break;
+
+        case "font":
+          if (!fonts.includes(url)) fonts.push(url);
+          request.abort();
+          break;
+
+        case "other":
+          const imageFormats = ["png", "jpg", "webp"];
+          if (imageFormats.some((format) => url.includes(format))) {
+            if (!images.includes(url)) images.push(url);
+            request.abort();
+          } else {
+            request.continue();
+          }
+          break;
+
+        default:
+          request.continue();
+          break;
+      }
+    });
+  }
+
+  async createPage(P_LINK, duration = "30000") {
     try {
       this.page = await this.browser.newPage();
       this.page.setDefaultNavigationTimeout(duration);
-      await this.page.setRequestInterception(true);
+      // ⛔️ Удаляем <noscript> (и опционально другие элементы)
+      await this.removeElementsOnLoad(this.page, ["noscript"]);
 
-      this.page.on("request", (request) => {
-        const url = request.url();
-        const type = request.resourceType(); // Тип ресурса (например, document, image, script и т.д.)
-        switch (type) {
-          case "image":
-            if (!this.images.includes(url)) {
-              this.images.push(url);
-            }
-            request.abort();
-            break;
-          case "stylesheet":
-            if (!this.stylesheets.includes(url)) {
-              this.stylesheets.push(url);
-            }
-            request.abort();
-            break;
-          case "font":
-            if (!this.fonts.includes(url)) {
-              this.fonts.push(url);
-            }
-            request.abort();
-            break;
-          case "other":
-            const imageFormats = ["png", "jpg", "webp"];
-            if (imageFormats.some((format) => url.includes(format))) {
-              if (!this.images.includes(url)) {
-                this.images.push(url);
-              }
-              request.abort();
-            }
-            break;
-
-          default:
-            request.continue();
-            // console.log(`Loaded resource: ${url}, Resource type: ${type}`);
-            break;
-        }
+      await this.removeNodesWithKeywords(this.page, ["eval", "atob"]);
+      // 🔐 Защита от eval, Function, atob
+      await this.injectSecurityGuards(this.page);
+      // 🛑 Блокировка загрузки нежелательных ресурсов
+      await this.setupRequestInterception(this.page, {
+        images: this.images,
+        stylesheets: this.stylesheets,
+        fonts: this.fonts,
+        blockedScriptKeywords: [
+          "bean",
+          "afrdtech.com",
+          "kmnrKey",
+          "clarity",
+          "fbevents",
+          "kmnr",
+          "bean-script",
+        ],
+        allowedDomain: new URL(P_LINK).hostname,
       });
     } catch (error) {
-      new RequestError(500, `I can't create browser page:${error.message}`);
+      throw new RequestError(
+        500,
+        `I can't create browser page:${error.message}`
+      );
     }
   }
-  //  Method implement authenticate proxy for parser, if any PROX_LOGIN and PROX_PASS
+
   async authenticateProxy(PROX_LOGIN, PROX_PASS) {
     if (!PROX_LOGIN || !PROX_PASS) {
       console.log("Вход без прокси".green);
@@ -89,40 +274,39 @@ class WebScraper {
       });
       console.log("Подключение к прокси прошло успешно".brightGreen.bold);
     } catch (error) {
-      // console.log("Ошибка при подключении к прокси");
-      new RequestError(401, `Unused login or password to the proxy`);
+      throw new RequestError(401, `Unused login or password to the proxy`);
     }
   }
-  //  Method implement naviagte on a page
+
   async gotoLink(P_LINK) {
     try {
-      await this.page.goto(`${P_LINK}`);
+      // Ждем полной загрузки страницы
+      await this.page.goto(`${P_LINK}`, { waitUntil: "networkidle2" });
     } catch (error) {
-      new RequestError(500, "Pagination error, try again");
+      throw new RequestError(500, "Pagination error, try again");
     }
   }
-  //  Method implement parse full content in HTML
+
   async parseContent() {
     try {
+      // Страница уже загружена при gotoLink с networkidle2
       await this.page.waitForSelector("html", { visible: true });
 
-      const smoothScroll = async () => {
-        const maxHeight = document.body.scrollHeight;
-        const duration = 1000;
-        const increment = 20;
-
-        for (let i = 0; i <= duration; i += increment) {
-          const position = (maxHeight * i) / duration;
-          window.scrollTo(0, position);
-          await new Promise((resolve) => setTimeout(resolve, increment));
+      // Плавная прокрутка до конца страницы
+      await this.page.evaluate(async () => {
+        const distance = 100;
+        let totalHeight = 0;
+        while (true) {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          const newTotalHeight = document.body.scrollHeight;
+          if (newTotalHeight === scrollHeight) {
+            break;
+          }
+          totalHeight = newTotalHeight;
         }
-      };
-
-      // Вызываем плавную прокрутку
-      await this.page.evaluate(smoothScroll);
-
-      // Дождемся, пока скролл не завершится
-      await this.page.waitForTimeout(1000); // Подождем еще 1 секунду (вы можете увеличить время ожидания, если необходимо)
+      });
 
       return await this.page.content();
     } catch (error) {
@@ -130,8 +314,6 @@ class WebScraper {
       throw new RequestError(500, "Error in parsing");
     }
   }
-
-  // async searchFontsOnPage(createFile, P_LINK) {}
 
   async searchJsForPage(createFile, P_LINK) {
     const scripts = await this.page.$$eval("script", (elements) =>
@@ -142,7 +324,7 @@ class WebScraper {
         const response = await axios.get(script, {
           responseType: "arraybuffer",
         });
-        const data = await response.data;
+        const data = response.data;
         const fileName = script.substring(
           script.lastIndexOf("/") + 1,
           script.lastIndexOf(".js") + 3
@@ -155,14 +337,16 @@ class WebScraper {
     }
     await this.gotoLink(P_LINK);
   }
-  //  Method implement find css links on a page
+
   async searchCssForPage(createFile, P_LINK) {
     const linkCss = await this.page.$$eval("link", (elements) =>
       elements.map((el) => el.href).filter((e) => e.includes(".css"))
     );
     for (let link of linkCss) {
       try {
-        const response = await this.page.goto(link);
+        const response = await this.page.goto(link, {
+          waitUntil: "networkidle2",
+        });
         const data = await response.buffer();
 
         let fileName = link.substring(
@@ -176,10 +360,8 @@ class WebScraper {
     }
     await this.gotoLink(P_LINK);
   }
-  //  Method implement find img tags on a page
+
   async searchImageForPage(createFile, P_LINK) {
-    // img tag for all images
-    // const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
     for (let image of this.images) {
       console.log(image);
       try {
@@ -187,13 +369,11 @@ class WebScraper {
           const response = await axios.get(image, {
             responseType: "arraybuffer",
           });
-
           const data = response.data;
           const fileName = image.substring(image.lastIndexOf("/") + 1);
           await createFile(fileName, data);
         } else {
           const response = await fetch(image);
-
           const data = await response.buffer();
           console.log(data);
           const fileName = image.substring(image.lastIndexOf("/") + 1);
@@ -207,7 +387,6 @@ class WebScraper {
 
     await this.gotoLink(P_LINK);
 
-    // source tag for Webp images
     const sources = await this.page.$$eval("source", (e) =>
       e.map((el) => el.srcset.split(" ")[0].replace("./", ""))
     );
@@ -227,10 +406,9 @@ class WebScraper {
 
     await this.gotoLink(P_LINK);
   }
-  //  Method implement closed broser after compliting all tasks
+
   async closeBrowser() {
     await this.browser.close();
-
     console.log("Работа завершена".brightGreen.bold);
   }
 }

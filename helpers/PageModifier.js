@@ -1,5 +1,7 @@
 const puppeteer = require("puppeteer");
 const path = require("path");
+const url = require("url");
+
 const fs = require("fs/promises");
 require("dotenv").config();
 require("colors");
@@ -9,12 +11,13 @@ class PageModifier {
   constructor() {
     this.browser = null;
     this.page = null;
-    this.pathDir = path.resolve("file:///", __dirname, "../src/index.html");
+    this.pathDir = url.pathToFileURL(
+      path.resolve(__dirname, "../src/index.html")
+    ).href;
   }
   // Method implement initializes pupetter browser
   async initializeModifier(headless = "true") {
     this.browser = await puppeteer.launch({
-      executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
       headless: headless,
       ignoreHTTPSErrors: true,
     });
@@ -26,18 +29,22 @@ class PageModifier {
   }
   //  Method implement naviagte on a page
   async gotoLink(direction = this.pathDir) {
-    await this.page.goto(direction);
+    await this.page.goto(direction, { waitUntil: "networkidle2" });
     await this.page.waitForSelector("html", { visible: true });
   }
   // Method implement delete preset settings, for example <base>
   async clearPresetSettings() {
-    await this.page.evaluate(async () => {
+    const baseRemoved = await this.page.evaluate(() => {
       const removeBase = document.querySelector("base");
       if (removeBase) {
         removeBase.remove();
-        console.log("Тег <base> удален".green);
+        return true;
       }
+      return false;
     });
+    if (baseRemoved) {
+      console.log("Тег <base> удален".green);
+    }
   }
   // add indvidual tag for div tags
   async addIndividualTag(nameTag) {
@@ -57,53 +64,56 @@ class PageModifier {
   }
   // Method implement edit css link in html file
   async editCssLink() {
-    const linksCss = await this.page.$$eval("link", (elements) =>
-      elements.map((el) => el.href).filter((e) => e.includes(".css"))
-    );
-    for (let i = 0; i < linksCss.length; i += 1) {
-      try {
-        await this.page.$$eval("link", (elements) => {
-          elements.forEach((el) => {
-            if (el.hasAttribute("rel") && el.getAttribute("rel") === "icon") {
-              return el.setAttribute(
-                "href",
-                `./images/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
-              );
-            }
+    await this.page.$$eval("link", (elements) => {
+      elements.forEach((el) => {
+        if (el.hasAttribute("rel")) {
+          const rel = el.getAttribute("rel");
+          const href = el.getAttribute("href") || "";
+          if (rel === "icon") {
             el.setAttribute(
               "href",
-              `./css/${el.href.substring(el.href.lastIndexOf("/") + 1)}`
+              `./images/${href.substring(href.lastIndexOf("/") + 1)}`
             );
-          });
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    }
-    console.log("в теге <link> поменян путь на './css/...'".green);
+          } else if (rel === "stylesheet" && href.includes(".css")) {
+            el.setAttribute(
+              "href",
+              `./css/${href.substring(href.lastIndexOf("/") + 1)}`
+            );
+          }
+        }
+      });
+    });
+    console.log(
+      "в теге <link> поменян путь на './css/...', для иконок - './images/...'"
+        .green
+    );
   }
   // Method implement edit js script in html file
   async editJsScript() {
+    // Находим скрипты один раз
     const scripts = await this.page.$$eval("script", (elements) =>
       elements.map((el) => el.src).filter((e) => e.includes(".js"))
     );
-    for (let i = 0; i < scripts.length; i += 1) {
-      try {
-        const files = await fs.readdir("./src/js");
-        await this.page.$$eval("script", (elements) => {
-          console.log(elements);
-          elements.forEach((el) => {
-            if (el.hasAttribute("src")) el.remove();
-          });
-        });
-      } catch (err) {
-        console.log(err);
-      }
-      console.log("Тег <script> почищен".green);
-    }
-    const files = await fs.readdir("./src/js");
+
+    // Удаляем все скрипты с атрибутом src
+    await this.page.$$eval("script", (elements) => {
+      elements.forEach((el) => {
+        if (el.hasAttribute("src")) el.remove();
+      });
+    });
+    console.log("Тег <script> почищен".green);
+
+    // Считываем локальные файлы из ./src/js
+    let files = [];
     try {
-      for (const file of files) {
+      files = await fs.readdir("./src/js");
+    } catch (err) {
+      console.log(`Ошибка при чтении директории js: ${err.message}`.red);
+    }
+
+    // Добавляем все локальные скрипты
+    for (const file of files) {
+      try {
         await this.page.$eval(
           "body",
           (body, file) => {
@@ -114,35 +124,47 @@ class PageModifier {
           },
           file
         );
+      } catch (err) {
+        console.log(
+          `Ошибка при добавлении скрипта ${file}: ${err.message}`.red
+        );
       }
-    } catch (err) {
-      console.log(err);
     }
+
     console.log("Тег <script> из существующих файлов js добавлен в body".green);
   }
+
   // Method implement edit or add jquery script in html file
   async editJqueryScript() {
-    await this.page.$eval("head", (head) => {
-      const linkJquery =
-        "https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js";
-      if (document.querySelector(`script[src="${linkJquery}"]`)) {
-        console.log("Уже есть JQuery".yellow);
-        return;
-      } else {
-        const script = document.createElement("script"); // исправлено
-        script.setAttribute(
-          "src",
-          "https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"
-        );
-        head.appendChild(script);
-      }
-    });
+    const linkJquery =
+      "https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js";
+
+    // Проверяем, есть ли уже jQuery
+    const isJqueryPresent = await this.page.evaluate((url) => {
+      return !!document.querySelector(`script[src="${url}"]`);
+    }, linkJquery);
+
+    if (isJqueryPresent) {
+      console.log("Уже есть JQuery".yellow);
+      return;
+    }
+
+    // Если jQuery нет, добавляем
+    await this.page.evaluate((url) => {
+      const head = document.querySelector("head");
+      if (!head) return;
+      const script = document.createElement("script");
+      script.src = url;
+      head.appendChild(script);
+    }, linkJquery);
+
     console.log("JQuery установлен в head".green);
   }
+
   // Method implement edit the tag "a" clearing the href attribute
   async clearLinkTag() {
-    await this.page.$$eval("a", (e) =>
-      e.map((el) => {
+    await this.page.$$eval("a", (elements) => {
+      elements.forEach((el) => {
         el.href = "#";
         if (el.hasAttribute("onclick")) el.removeAttribute("onclick");
         if (el.hasAttribute("target")) el.removeAttribute("target");
@@ -152,14 +174,15 @@ class PageModifier {
         if (el.hasAttribute("elementdataevent")) {
           el.removeAttribute("elementdataevent");
         }
-      })
-    );
+      });
+    });
     console.log("Тег <a> почищен ".green);
   }
+
   // Method wrap img tag in a tag
   async wrapImage() {
-    await this.page.$$eval("img", (e) => {
-      e.map((item) => {
+    await this.page.$$eval("img", (elements) => {
+      elements.forEach((item) => {
         const createTagA = document.createElement("a");
         createTagA.setAttribute("href", "#");
         createTagA.appendChild(item.cloneNode(true));
@@ -167,49 +190,35 @@ class PageModifier {
       });
     });
   }
+
   // Method implement edit img to specify the required path
   async editImages() {
-    // await this.wrapImage();
-    const images = await this.page.$$eval("img", (e) => e.map((el) => el.src));
-    for (let i = 0; i < images.length; i += 1) {
-      try {
-        const files = await fs.readdir("./src/images");
-        await this.page.$$eval("img", (elements) => {
-          elements.forEach((el) => {
-            el.setAttribute(
-              "src",
-              `./images/${el.src.substring(el.src.lastIndexOf("/") + 1)}`
-            );
-            if (!el.hasAttribute("loading")) {
-              el.setAttribute("loading", "lazy");
-            }
-          });
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    }
-    const sources = await this.page.$$eval("source", (e) =>
-      e.map((el) => el.srcset)
-    );
-    for (let i = 0; i < sources.length; i += 1) {
-      try {
-        await this.page.$$eval("source", (elements) => {
-          elements.forEach((el) => {
-            el.setAttribute(
-              "srcset",
-              `./images/${el.srcset.substring(el.srcset.lastIndexOf("/") + 1)}`
-            );
-          });
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    }
-    console.log("в теге <img> поменян путь на './images/...'".green);
+    await this.page.$$eval("img", (elements) => {
+      elements.forEach((el) => {
+        el.setAttribute(
+          "src",
+          `./images/${el.src.substring(el.src.lastIndexOf("/") + 1)}`
+        );
+        if (!el.hasAttribute("loading")) {
+          el.setAttribute("loading", "lazy");
+        }
+      });
+    });
+
+    await this.page.$$eval("source", (elements) => {
+      elements.forEach((el) => {
+        el.setAttribute(
+          "srcset",
+          `./images/${el.srcset.substring(el.srcset.lastIndexOf("/") + 1)}`
+        );
+      });
+    });
+
+    console.log("в теге <img> и <source> поменян путь на './images/...'".green);
   }
+
   async editCss() {
-    const styles = await this.page.evaluate(() => {
+    await this.page.evaluate(() => {
       const styleTags = document.querySelectorAll("style");
       styleTags.forEach((styleTag) => {
         const updatedStyleContent = styleTag.innerHTML.replace(
@@ -220,9 +229,9 @@ class PageModifier {
       });
     });
   }
+
   async editCssProperty() {
     const files = await fs.readdir("./src/css");
-
     for (let file of files) {
       const cssFilePath = path.join(__dirname, "../src/css", file);
       const cssContent = await fs.readFile(cssFilePath, "utf8");
@@ -242,17 +251,16 @@ class PageModifier {
     console.log("update");
 
     const htmlContent = await this.page.content();
-    await fs.writeFile("./src/index.html", htmlContent, function (err) {
-      if (err) {
-        throw err;
-      }
+    try {
+      await fs.writeFile("./src/index.html", htmlContent, "utf8");
       console.log("HTML файл обновлен".green);
-    });
+    } catch (err) {
+      console.log(err);
+    }
   }
   // Method implement finally the script and close the browser
   async closeBrowser() {
     await this.browser.close();
-
     console.log("Работа завершена".brightGreen.bold);
   }
 }
