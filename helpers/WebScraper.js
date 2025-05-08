@@ -27,49 +27,232 @@ class WebScraper {
     });
   }
 
-  async createPage(duration = "30000") {
+  // Метод для удаления элементов по тегу при загрузке страницы
+  async removeElementsOnLoad(page, tags = ["noscript"]) {
+    const selectorList = tags.map((tag) => `${tag}`).join(",");
+    await page.evaluateOnNewDocument((selectorList) => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const elements = document.querySelectorAll(selectorList);
+        elements.forEach((el) => el.remove());
+      });
+
+      // Optional: удалить сразу, если DOM уже есть (для SSR страниц)
+      const elements = document.querySelectorAll(selectorList);
+      elements.forEach((el) => el.remove());
+    }, selectorList);
+  }
+  // Отключение eval, atob
+  async injectSecurityGuards(page) {
+    await page.evaluateOnNewDocument(() => {
+      // 🔒 Заблокировать eval
+      const blockEval = () => {
+        window.eval = () => {
+          console.warn("Blocked: eval() is disabled");
+          return undefined;
+        };
+        try {
+          Object.defineProperty(window, "eval", {
+            configurable: false,
+            writable: false,
+            value: () => {
+              console.warn("Blocked: eval() is disabled");
+              return undefined;
+            },
+          });
+        } catch (e) {}
+      };
+
+      // 🔒 Заблокировать Function
+      const blockFunctionConstructor = () => {
+        window.Function = function () {
+          console.warn("Blocked: Function constructor is disabled");
+          return () => {};
+        };
+        try {
+          Object.defineProperty(window, "Function", {
+            configurable: false,
+            writable: false,
+            value: function () {
+              console.warn("Blocked: Function constructor is disabled");
+              return () => {};
+            },
+          });
+        } catch (e) {}
+      };
+
+      // 🔒 Заблокировать atob
+      const blockAtob = () => {
+        window.atob = () => {
+          console.warn("Blocked: atob() is disabled");
+          return "";
+        };
+        try {
+          Object.defineProperty(window, "atob", {
+            configurable: false,
+            writable: false,
+            value: () => {
+              console.warn("Blocked: atob() is disabled");
+              return "";
+            },
+          });
+        } catch (e) {}
+      };
+
+      blockEval();
+      blockFunctionConstructor();
+      blockAtob();
+    });
+  }
+  // перехват и удаление узлов с определенными ключевыми словами
+  async removeNodesWithKeywords(page, keywords = ["eval", "atob"]) {
+    const pattern = new RegExp(keywords.join("|"), "i");
+
+    await page.evaluateOnNewDocument((patternSource) => {
+      const pattern = new RegExp(patternSource, "i");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const tagChecks = {
+          script: (el) => pattern.test(el.textContent),
+          iframe: (el) =>
+            el.hasAttribute("srcdoc") &&
+            pattern.test(el.getAttribute("srcdoc")),
+          img: (el) => {
+            const onerror = el.getAttribute("onerror");
+            return onerror && pattern.test(onerror);
+          },
+          a: (el) => {
+            const href = el.getAttribute("href");
+            return href && href.startsWith("javascript:") && pattern.test(href);
+          },
+          "*": (el) => {
+            const attrs = ["onclick", "onload", "onmouseover", "onmouseenter"];
+            return attrs.some((attr) => {
+              const val = el.getAttribute(attr);
+              return val && pattern.test(val);
+            });
+          },
+        };
+
+        // Целевые теги для анализа
+        const targetTags = ["script", "iframe", "img", "a"];
+
+        targetTags.forEach((tag) => {
+          document.querySelectorAll(tag).forEach((el) => {
+            if (tagChecks[tag](el)) {
+              console.warn(`🧹 Removed <${tag}> due to keyword match`);
+              el.remove();
+            }
+          });
+        });
+
+        // Последний проход — проверка на общие JS-атрибуты (onclick, и т.п.)
+        document.querySelectorAll("*").forEach((el) => {
+          if (tagChecks["*"](el)) {
+            console.warn("🧹 Removed node with suspicious inline JS");
+            el.remove();
+          }
+        });
+      });
+    }, pattern.source);
+  }
+  //  для перехвата запросов
+  async setupRequestInterception(page, context = {}) {
+    const {
+      images = [],
+      stylesheets = [],
+      fonts = [],
+      blockedScriptKeywords = [],
+      allowedDomain,
+    } = context;
+
+    await page.setRequestInterception(true);
+
+    page.on("request", (request) => {
+      const url = request.url();
+      const type = request.resourceType();
+
+      const isNav = request.isNavigationRequest();
+      // 🛑 Блок редиректов за пределы домена
+      if (isNav && allowedDomain) {
+        const hostname = new URL(url).hostname;
+        if (!hostname.includes(allowedDomain)) {
+          console.warn("🚫 REDIRECT BLOCKED:", url);
+          return request.abort();
+        }
+      }
+
+      switch (type) {
+        case "image":
+          if (!images.includes(url)) images.push(url);
+          request.abort();
+          break;
+
+        case "script":
+          request.abort();
+          // const shouldBlock = blockedScriptKeywords.some((keyword) =>
+          //   url.includes(keyword)
+          // );
+
+          // if (shouldBlock) {
+          //   console.log("🛑 BLOCKED SCRIPT:", url);
+          //   request.abort();
+          // } else {
+          //   request.continue();
+          // }
+          break;
+
+        case "stylesheet":
+          if (!stylesheets.includes(url)) stylesheets.push(url);
+          request.abort();
+          break;
+
+        case "font":
+          if (!fonts.includes(url)) fonts.push(url);
+          request.abort();
+          break;
+
+        case "other":
+          const imageFormats = ["png", "jpg", "webp"];
+          if (imageFormats.some((format) => url.includes(format))) {
+            if (!images.includes(url)) images.push(url);
+            request.abort();
+          } else {
+            request.continue();
+          }
+          break;
+
+        default:
+          request.continue();
+          break;
+      }
+    });
+  }
+
+  async createPage(P_LINK, duration = "30000") {
     try {
       this.page = await this.browser.newPage();
       this.page.setDefaultNavigationTimeout(duration);
-      await this.page.setRequestInterception(true);
+      // ⛔️ Удаляем <noscript> (и опционально другие элементы)
+      await this.removeElementsOnLoad(this.page, ["noscript"]);
 
-      this.page.on("request", (request) => {
-        const url = request.url();
-        const type = request.resourceType();
-        switch (type) {
-          case "image":
-            if (!this.images.includes(url)) {
-              this.images.push(url);
-            }
-            request.abort();
-            break;
-          case "stylesheet":
-            if (!this.stylesheets.includes(url)) {
-              this.stylesheets.push(url);
-            }
-            request.abort();
-            break;
-          case "font":
-            if (!this.fonts.includes(url)) {
-              this.fonts.push(url);
-            }
-            request.abort();
-            break;
-          case "other":
-            const imageFormats = ["png", "jpg", "webp"];
-            if (imageFormats.some((format) => url.includes(format))) {
-              if (!this.images.includes(url)) {
-                this.images.push(url);
-              }
-              request.abort();
-            } else {
-              request.continue();
-            }
-            break;
-          default:
-            request.continue();
-            break;
-        }
+      await this.removeNodesWithKeywords(this.page, ["eval", "atob"]);
+      // 🔐 Защита от eval, Function, atob
+      await this.injectSecurityGuards(this.page);
+      // 🛑 Блокировка загрузки нежелательных ресурсов
+      await this.setupRequestInterception(this.page, {
+        images: this.images,
+        stylesheets: this.stylesheets,
+        fonts: this.fonts,
+        blockedScriptKeywords: [
+          "bean",
+          "afrdtech.com",
+          "kmnrKey",
+          "clarity",
+          "fbevents",
+          "kmnr",
+          "bean-script",
+        ],
+        allowedDomain: new URL(P_LINK).hostname,
       });
     } catch (error) {
       throw new RequestError(

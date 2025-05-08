@@ -18,7 +18,7 @@ async function main(deleteAnswer) {
 
   // Парсинг сайта
   await scraper.initializeParser(PROX_SERVER, false);
-  await scraper.createPage(120000);
+  await scraper.createPage(P_LINK, 120000);
   await scraper.authenticateProxy(PROX_LOGIN, PROX_PASS);
   await scraper.gotoLink(P_LINK);
 
