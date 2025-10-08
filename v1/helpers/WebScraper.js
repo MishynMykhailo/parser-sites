@@ -180,7 +180,6 @@ class WebScraper {
           return request.abort();
         }
       }
-
       switch (type) {
         case "image":
           if (!images.includes(url)) images.push(url);
